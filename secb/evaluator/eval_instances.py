@@ -187,6 +187,46 @@ def preprocess_swea_poc(input_dir: Path) -> Dict[str, str]:
     return processed_poc
 
 
+def preprocess_minisweagent_patch(input_dir: Path) -> Dict[str, str]:
+    """Preprocess patch data from mini-swe-agent format."""
+    return preprocess_swea_patch(input_dir)
+
+
+def preprocess_minisweagent_poc(input_dir: Path) -> Dict[str, str]:
+    """Preprocess PoC data from mini-swe-agent format.
+
+    The runner writes a SWE-agent-compatible ``preds.json`` but may also include
+    a dedicated ``poc_artifact`` field. Prefer that field when present.
+    """
+    processed_poc: Dict[str, str] = {}
+    preds_file = input_dir / "preds.json"
+    if not preds_file.exists():
+        logger.error(f"preds.json not found in {input_dir}")
+        return processed_poc
+
+    try:
+        with preds_file.open() as f:
+            patch_data = json.load(f)
+
+        for instance_id, pd in patch_data.items():
+            if not instance_id:
+                logger.warning("Missing instance_id in mini-swe-agent PoC data")
+                continue
+
+            model_poc = pd.get("poc_artifact", pd.get("model_patch", ""))
+            if model_poc is None or model_poc == "":
+                logger.warning(
+                    f"Null model_poc for instance {instance_id}, using empty string"
+                )
+                model_poc = ""
+
+            processed_poc[instance_id] = model_poc
+    except Exception as e:
+        logger.error(f"Error processing mini-swe-agent PoC data: {e}")
+
+    return processed_poc
+
+
 def preprocess_oh_patch(input_dir: Path) -> Dict[str, str]:
     """Preprocess patch data from OpenHands agent format.
 
@@ -655,7 +695,7 @@ def get_preprocessor(agent: str, task_type: str = "patch"):
     """Returns the appropriate preprocessor function based on agent type and task type.
 
     Args:
-        agent: The agent type (swea, oh, aider, smolagent)
+        agent: The agent type (swea, oh, aider, smolagent, minisweagent)
         task_type: The task type (patch or poc)
 
     Returns:
@@ -677,6 +717,10 @@ def get_preprocessor(agent: str, task_type: str = "patch"):
         "smolagent": {
             "patch": preprocess_smolagent_patch,
             "poc": preprocess_smolagent_poc,
+        },
+        "minisweagent": {
+            "patch": preprocess_minisweagent_patch,
+            "poc": preprocess_minisweagent_poc,
         },
     }
 
@@ -1379,7 +1423,7 @@ def main():
     )
     parser.add_argument(
         "--agent",
-        choices=["swea", "oh", "aider", "smolagent"],
+        choices=["swea", "oh", "aider", "smolagent", "minisweagent"],
         default="swea",
         help="Agent type that generated the patches (default: swea)",
     )

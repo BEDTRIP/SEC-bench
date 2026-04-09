@@ -1,0 +1,47 @@
+# SEC-bench runner configuration for mini-swe-agent
+
+[model]
+type = "LiteLLMModel"
+model_id = "openai/gpt-4.1"
+# Optional: forwarded into mini-swe-agent model.model_kwargs
+# api_key = "your-api-key"
+# api_base = "http://127.0.0.1:1234/v1"
+
+[dataset]
+name = "SEC-bench/SEC-bench"
+split = "eval"
+instance_ids = [
+    "njs.cve-2022-32414",
+]
+
+[output]
+output_dir = "./results/minisweagent"
+
+[docker]
+image_prefix = "hwiwonlee/secb.eval.x86_64"
+
+[docker.run_kwargs]
+mem_limit = "8g"
+network_mode = "host"
+auto_remove = true
+
+[task]
+type = "patch"
+timeout_seconds = 3600
+
+[minisweagent]
+# Optional when mini-swe-agent is already installed in the environment.
+# If omitted, the runner looks for a sibling ../mini-swe-agent checkout.
+# repo_path = "../mini-swe-agent"
+
+yolo = true
+command_timeout = 300
+container_timeout = "2h"
+
+# Patch task defaults
+patch_agent_class = "security"
+patch_config_specs = ["mini.yaml", "security.yaml"]
+
+# PoC task defaults
+poc_agent_class = "interactive"
+poc_config_specs = ["mini.yaml"]

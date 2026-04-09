@@ -69,8 +69,8 @@ def parse_args():
     parser.add_argument(
         "--agent",
         required=True,
-        choices=["swea", "oh", "aider"],
-        help="Agent type (swea, oh, or aider)",
+        choices=["swea", "oh", "aider", "minisweagent"],
+        help="Agent type (swea, oh, aider, or minisweagent)",
     )
     parser.add_argument(
         "--input-dir", required=True, help="Input directory containing report files"
@@ -311,6 +311,28 @@ def calculate_cost_swea(
     return total_cost, total_file_cnt
 
 
+def calculate_cost_minisweagent(
+    input_dir: str, filtered_instances: Optional[Set[str]] = None
+) -> Tuple[float, int]:
+    """Calculate total cost for mini-swe-agent from trajectory files."""
+    total_cost = 0
+    total_file_cnt = 0
+    target_files = [f for f in Path(input_dir).glob("**/*.traj.json")]
+    logger.info(f"Found {len(target_files)} trajectory files in {input_dir}")
+
+    for file in target_files:
+        with open(file) as f:
+            data = json.load(f)
+            if filtered_instances is not None:
+                instance_id = data.get("instance_id", "")
+                if instance_id not in filtered_instances:
+                    continue
+            total_file_cnt += 1
+            total_cost += data.get("info", {}).get("model_stats", {}).get("instance_cost", 0)
+
+    return total_cost, total_file_cnt
+
+
 def calculate_cost_oh(
     input_dir: str, filtered_instances: Optional[Set[str]] = None
 ) -> Tuple[float, int]:
@@ -498,6 +520,10 @@ def main():
 
     if args.agent == "swea":
         total_cost, file_count = calculate_cost_swea(args.input_dir, filtered_instances)
+    elif args.agent == "minisweagent":
+        total_cost, file_count = calculate_cost_minisweagent(
+            args.input_dir, filtered_instances
+        )
     elif args.agent == "oh":
         total_cost, file_count = calculate_cost_oh(args.input_dir, filtered_instances)
     elif args.agent == "aider":

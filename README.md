@@ -324,6 +324,47 @@ python -m secb.evaluator.eval_instances \
     --output-dir ./output/eval/patch
 ```
 
+### 🤖 Running mini-swe-agent
+
+`mini-swe-agent` can be run through a lightweight SEC-bench adapter that uses
+the benchmark's evaluation Docker images and writes SEC-bench-compatible
+`preds.json` outputs.
+
+#### Setup
+
+Install `mini-swe-agent` in the same Python environment or keep a sibling
+checkout at `../mini-swe-agent`:
+
+```bash
+pip install -e ../mini-swe-agent
+```
+
+Copy and edit the example config:
+
+```bash
+cp config.minisweagent.example.toml config.minisweagent.toml
+```
+
+#### Run patch generation
+
+```bash
+python -m secb.runners.minisweagent --config config.minisweagent.toml
+```
+
+#### Evaluate mini-swe-agent results
+
+```bash
+python -m secb.evaluator.eval_instances \
+    --input-dir ./results/minisweagent/[timestamp] \
+    --type patch \
+    --split eval \
+    --agent minisweagent \
+    --output-dir ./output/eval/minisweagent-patch
+```
+
+For PoC generation set `task.type` to `poc-repo`, `poc-desc`, or `poc-san` in
+the runner config and evaluate with `--type poc --agent minisweagent`.
+
 ### 📊 Results Viewing
 
 #### Patch Results
